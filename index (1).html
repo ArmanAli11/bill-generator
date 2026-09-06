@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="theme-color" content="#1F2E4D" />
+<title>Bill Generator — Professional Bills in Seconds</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.8/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --ink:#1F2E4D;
+    --ink-soft:#4B5D80;
+    --brass:#B8863B;
+    --brass-dark:#93672A;
+    --ledger-red:#A5434B;
+    --paper:#FBF8F2;
+    --paper-line:#E5DCC8;
+    --app-bg:#F1EFE9;
+    --surface:#FFFFFF;
+    --text:#26261F;
+    --text-soft:#6b6a60;
+    --border:#DEDACB;
+    --danger:#B3413C;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--app-bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:88px;
+  }
+  h1,h2,h3{margin:0;}
+  .topbar{
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .topbar h1{
+    font-size:1.25rem;
+    color:var(--ink);
+    letter-spacing:.2px;
+  }
+  .topbar p{
+    margin:4px 0 0;
+    font-size:.85rem;
+    color:var(--text-soft);
+  }
+
+  .tabs{
+    display:none;
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+  }
+  .tabs button{
+    flex:1;
+    border:none;
+    background:none;
+    padding:12px 0;
+    font-size:.9rem;
+    font-weight:600;
+    color:var(--text-soft);
+    border-bottom:3px solid transparent;
+  }
+  .tabs button.active{
+    color:var(--ink);
+    border-bottom-color:var(--brass);
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(320px,440px) 1fr;
+    gap:20px;
+    align-items:start;
+    max-width:1180px;
+    margin:20px auto;
+    padding:0 20px;
+  }
+
+  .form-panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+  fieldset{
+    border:none;
+    padding:0;
+    margin:0 0 22px;
+  }
+  fieldset:last-of-type{margin-bottom:6px;}
+  legend{
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--brass-dark);
+    padding:0 0 8px;
+    width:100%;
+    border-bottom:1px solid var(--paper-line);
+    margin-bottom:12px;
+  }
+  .field{
+    margin-bottom:12px;
+  }
+  .field label{
+    display:block;
+    font-size:.78rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .field-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  input[type=text],input[type=email],input[type=date],input[type=number],textarea{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:.92rem;
+    font-family:inherit;
+    color:var(--text);
+    background:#fff;
+  }
+  textarea{resize:vertical;min-height:38px;}
+  input:focus-visible,textarea:focus-visible,button:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:1px;
+  }
+  .hint{font-size:.72rem;color:var(--text-soft);margin-top:3px;}
+
+  .logo-row{display:flex;align-items:center;gap:12px;}
+  .logo-thumb{
+    width:52px;height:52px;border-radius:8px;border:1px solid var(--border);
+    object-fit:contain;background:#fff;
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 14px;border-radius:8px;font-size:.85rem;font-weight:600;
+    border:1px solid var(--border);background:#fff;color:var(--ink);
+    cursor:pointer;
+  }
+  .btn:hover{background:#f7f5ef;}
+  .btn-text{border:none;background:none;color:var(--ink-soft);padding:6px 4px;text-decoration:underline;font-size:.78rem;}
+  .btn-danger{color:var(--danger);}
+
+  .item-card{
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:12px;
+    margin-bottom:10px;
+    background:#fefdfa;
+    position:relative;
+  }
+  .item-card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;
+  }
+  .item-card-head span{
+    font-size:.72rem;font-weight:700;color:var(--text-soft);
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  .remove-item-btn{
+    border:none;background:none;color:var(--danger);
+    font-size:.78rem;font-weight:600;cursor:pointer;padding:2px 4px;
+  }
+  .item-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-top:8px;
+  }
+  .item-amount{
+    grid-column:1 / -1;
+    display:flex;justify-content:space-between;align-items:center;
+    padding-top:6px;margin-top:2px;border-top:1px dashed var(--paper-line);
+    font-size:.85rem;
+  }
+  .item-amount b{
+    font-variant-numeric:tabular-nums;color:var(--ink);
+  }
+
+  #addItemBtn{width:100%;margin-top:2px;}
+
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* Preview */
+  .preview-panel{position:sticky;top:16px;}
+  .paper-wrap{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+  }
+  .paper{
+    background:var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    padding:30px 26px;
+    position:relative;
+    max-width:680px;
+    margin:0 auto;
+    font-family:Georgia,'Times New Roman',serif;
+    color:var(--text);
+  }
+  .paper::before{
+    content:'';
+    position:absolute;
+    left:34px;top:0;bottom:0;width:1px;
+    background:rgba(165,67,75,.35);
+  }
+  .pv-logo-row{text-align:center;margin-bottom:6px;}
+  .pv-logo{max-height:56px;max-width:180px;object-fit:contain;}
+  .pv-bizname{
+    text-align:center;font-size:1.6rem;color:var(--ink);
+    letter-spacing:.02em;margin-bottom:4px;
+  }
+  .pv-tagline,.pv-address,.pv-contact{
+    text-align:center;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.78rem;color:var(--text-soft);margin:2px 0;
+  }
+  .pv-rule{
+    height:2px;background:var(--brass);opacity:.75;margin:14px 0 12px;
+  }
+  .pv-meta{
+    display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.85rem;margin-bottom:6px;
+  }
+  .pv-meta:last-of-type{margin-bottom:14px;}
+  .pv-meta-col.right{text-align:right;}
+  .pv-meta .lbl{font-weight:700;color:var(--ink);}
+  .pv-subline{
+    font-size:.76rem;color:var(--text-soft);margin:1px 0;white-space:pre-wrap;
+  }
+  .pv-table{
+    width:100%;border-collapse:collapse;table-layout:fixed;
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.82rem;margin-bottom:4px;
+  }
+  .pv-table th{
+    background:var(--ink);color:#fff;font-size:.7rem;
+    text-transform:uppercase;letter-spacing:.04em;
+    padding:7px 6px;text-align:left;
+  }
+  .pv-table td{
+    padding:7px 6px;border-bottom:1px solid var(--paper-line);
+    vertical-align:top;
+  }
+  .pv-table tfoot td{
+    border-top:2px solid var(--ink);border-bottom:none;
+    font-weight:700;color:var(--ink);background:#f4efe2;
+  }
+  .col-no{width:8%;text-align:center;}
+  .col-qty{width:11%;text-align:center;}
+  .col-days{width:11%;text-align:center;}
+  .col-rate{width:18%;text-align:right;font-variant-numeric:tabular-nums;}
+  .col-amt{width:20%;text-align:right;font-variant-numeric:tabular-nums;}
+
+  .pv-words{
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.82rem;font-style:italic;color:var(--text);
+    margin:10px 0;
+  }
+  .pv-advbal{
+    display:flex;justify-content:flex-end;gap:22px;
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.82rem;margin-bottom:10px;
+  }
+  .pv-advbal .lbl{font-weight:700;color:var(--ink-soft);margin-right:4px;}
+  .pv-pan{
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.8rem;color:var(--text-soft);margin-bottom:14px;
+  }
+  .pv-notes{
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.78rem;color:var(--text-soft);font-style:italic;
+    margin-bottom:16px;white-space:pre-wrap;
+  }
+  .pv-bank{
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:.8rem;border:1px solid var(--paper-line);border-radius:6px;
+    padding:10px 12px;margin-bottom:26px;
+  }
+  .pv-bank .bank-title{font-weight:700;color:var(--ink);margin-bottom:4px;}
+  .pv-bank div{margin:2px 0;}
+  .pv-bank .lbl{display:inline-block;width:118px;color:var(--text-soft);}
+  .pv-sign{
+    text-align:right;font-style:italic;color:var(--ink);
+    font-size:.95rem;padding-top:26px;
+  }
+  .pv-sign .sign-line{
+    display:inline-block;width:150px;border-top:1px solid var(--text-soft);
+    margin-bottom:4px;
+  }
+
+  .action-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:var(--surface);border-top:1px solid var(--border);
+    padding:12px 20px;display:flex;gap:10px;justify-content:flex-end;
+    max-width:1180px;margin:0 auto;
+  }
+  .action-bar-inner{display:flex;gap:10px;width:100%;max-width:1180px;margin:0 auto;justify-content:flex-end;}
+  .btn-primary{
+    background:var(--ink);color:#fff;border-color:var(--ink);
+    padding:11px 20px;font-size:.9rem;
+  }
+  .btn-primary:hover{background:#16233b;}
+
+  @media (max-width:860px){
+    .tabs{display:flex;}
+    .layout{grid-template-columns:1fr;margin-top:0;padding:14px;}
+    .form-panel,.preview-panel{display:none;}
+    body.show-edit .form-panel{display:block;}
+    body.show-preview .preview-panel{display:block;}
+    .preview-panel{position:static;}
+    .paper{padding:20px 14px;}
+    .pv-bizname{font-size:1.3rem;}
+  }
+  @media (min-width:861px){
+    .tabs{display:none;}
+  }
+</style>
+</head>
+<body class="show-edit">
+
+  <div class="topbar">
+    <h1>Bill Generator</h1>
+    <p>Fill in your details once — download a clean, professional PDF bill any time.</p>
+  </div>
+
+  <div class="tabs">
+    <button id="tabEditBtn" class="active" type="button">Edit</button>
+    <button id="tabPreviewBtn" type="button">Preview</button>
+  </div>
+
+  <div class="layout">
+    <!-- FORM PANEL -->
+    <section class="form-panel">
+
+      <fieldset id="businessSection">
+        <legend>Your business</legend>
+        <div class="field">
+          <label for="bizName">Business / your name</label>
+          <input type="text" id="bizName" placeholder="e.g. Imran Ali" />
+        </div>
+        <div class="field">
+          <label for="bizTagline">Tagline / services</label>
+          <input type="text" id="bizTagline" placeholder="e.g. Commercial Photography, Studio Setup" />
+        </div>
+        <div class="field">
+          <label for="bizAddress">Address</label>
+          <textarea id="bizAddress" rows="2" placeholder="Shop / building, road, city - pincode"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="bizEmail">Email</label>
+            <input type="email" id="bizEmail" placeholder="you@email.com" />
+          </div>
+          <div class="field">
+            <label for="bizPhone">Phone</label>
+            <input type="text" id="bizPhone" placeholder="98201 21345" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="bizLogoInput">Logo (optional)</label>
+          <div class="logo-row">
+            <img id="bizLogoPreview" class="logo-thumb" hidden alt="Logo preview" />
+            <input type="file" id="bizLogoInput" accept="image/*" />
+          </div>
+          <button type="button" class="btn-text" id="removeLogoBtn" hidden>Remove logo</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bill details</legend>
+        <div class="field-row">
+          <div class="field">
+            <label for="billNo">Bill No.</label>
+            <input type="text" id="billNo" placeholder="1012" />
+          </div>
+          <div class="field">
+            <label for="billDate">Bill date</label>
+            <input type="date" id="billDate" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="clientName">M/s (client / party name)</label>
+          <input type="text" id="clientName" placeholder="e.g. Blue Advertising" />
+        </div>
+        <div class="field">
+          <label for="clientAddress">Client office address (optional)</label>
+          <textarea id="clientAddress" rows="2" placeholder="Office no., building, street, city, state - pincode"></textarea>
+        </div>
+        <div class="field">
+          <label for="clientGSTIN">Client GSTIN (optional)</label>
+          <input type="text" id="clientGSTIN" style="text-transform:uppercase" placeholder="27ABCDE1234F1Z5" />
+        </div>
+        <div class="field">
+          <label for="eventName">Event name</label>
+          <input type="text" id="eventName" placeholder="e.g. Jewellery Exhibition" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="eventFrom">Event date (from)</label>
+            <input type="date" id="eventFrom" />
+          </div>
+          <div class="field">
+            <label for="eventTo">Event date (to, optional)</label>
+            <input type="date" id="eventTo" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Items</legend>
+        <div id="itemsList"></div>
+        <button type="button" class="btn" id="addItemBtn">+ Add item</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Payment &amp; tax details</legend>
+        <div class="split">
+          <div class="field">
+            <label for="advance">Advance received</label>
+            <input type="number" id="advance" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="pan">PAN No.</label>
+            <input type="text" id="pan" placeholder="ABCPA1234D" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="bizGSTIN">Your GSTIN (optional)</label>
+          <input type="text" id="bizGSTIN" style="text-transform:uppercase" placeholder="27ABCDE1234F1Z5" />
+        </div>
+      </fieldset>
+
+      <fieldset id="bankSection">
+        <legend>Bank details</legend>
+        <div class="field">
+          <label for="bankHolder">Account holder name</label>
+          <input type="text" id="bankHolder" />
+        </div>
+        <div class="field">
+          <label for="bankAccount">Account number</label>
+          <input type="text" id="bankAccount" inputmode="numeric" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="bankIFSC">IFSC code</label>
+            <input type="text" id="bankIFSC" style="text-transform:uppercase" />
+          </div>
+          <div class="field">
+            <label for="bankName">Bank name</label>
+            <input type="text" id="bankName" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="bankBranch">Branch</label>
+          <input type="text" id="bankBranch" />
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Notes (optional)</legend>
+        <div class="field">
+          <textarea id="notes" rows="2" placeholder="e.g. Payment due within 7 days. Thank you!"></textarea>
+        </div>
+      </fieldset>
+
+    </section>
+
+    <!-- PREVIEW PANEL -->
+    <section class="preview-panel">
+      <div class="paper-wrap">
+        <div class="paper" id="billPreview">
+          <div class="pv-logo-row"><img id="pvLogo" class="pv-logo" hidden alt="" /></div>
+          <h2 class="pv-bizname" id="pvBizName">Your Business Name</h2>
+          <p class="pv-tagline" id="pvTagline"></p>
+          <p class="pv-address" id="pvAddress"></p>
+          <p class="pv-contact" id="pvContact"></p>
+          <div class="pv-rule"></div>
+          <div class="pv-meta">
+            <div class="pv-meta-col">
+              <div><span class="lbl">M/s:</span> <span id="pvClient">—</span></div>
+              <div class="pv-subline" id="pvClientAddress"></div>
+              <div class="pv-subline" id="pvClientGSTIN"></div>
+            </div>
+            <div class="pv-meta-col right">
+              <div><span class="lbl">Bill No:</span> <span id="pvBillNo">—</span></div>
+              <div><span class="lbl">Bill Date:</span> <span id="pvBillDate">—</span></div>
+            </div>
+          </div>
+          <div class="pv-meta">
+            <div class="pv-meta-col">
+              <div><span class="lbl">Event:</span> <span id="pvEventName">—</span></div>
+            </div>
+            <div class="pv-meta-col right">
+              <div><span class="lbl">Event Date:</span> <span id="pvEventDate">—</span></div>
+            </div>
+          </div>
+          <table class="pv-table">
+            <thead>
+              <tr>
+                <th class="col-no">No.</th>
+                <th>Particulars</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-days">Days</th>
+                <th class="col-rate">Rate</th>
+                <th class="col-amt">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="pvItemsBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" style="text-align:right;">Total</td>
+                <td class="col-amt" id="pvTotal"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="pv-words" id="pvWords"></div>
+          <div class="pv-advbal">
+            <div><span class="lbl">Advance:</span><span id="pvAdvance"></span></div>
+            <div><span class="lbl">Balance:</span><span id="pvBalance"></span></div>
+          </div>
+          <div class="pv-pan" id="pvPan"></div>
+          <div class="pv-notes" id="pvNotes"></div>
+          <div class="pv-bank" id="pvBank"></div>
+          <div class="pv-sign" id="pvSign">
+            <span class="sign-line"></span><br />
+            <span id="pvSignText">for Your Business Name</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="action-bar">
+    <div class="action-bar-inner">
+      <button type="button" class="btn" id="newBillBtn">New bill</button>
+      <button type="button" class="btn btn-primary" id="downloadBtn">Download PDF</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  function el(id){ return document.getElementById(id); }
+
+  var logo = { dataUrl: null, ratio: 1 };
+  var itemCounter = 0;
+
+  /* ---------- Indian number-to-words ---------- */
+  function numToWordsIndian(num){
+    num = Math.round(Math.abs(num));
+    if (num === 0) return 'Zero';
+    var ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+      'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    var tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+    function twoDigit(n){
+      if (n < 20) return ones[n];
+      return tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : '');
+    }
+    function threeDigit(n){
+      var str = '';
+      if (n >= 100){
+        str += ones[Math.floor(n/100)] + ' Hundred';
+        n = n % 100;
+        if (n) str += ' ';
+      }
+      if (n) str += twoDigit(n);
+      return str;
+    }
+
+    var crore = Math.floor(num / 10000000); num %= 10000000;
+    var lakh = Math.floor(num / 100000); num %= 100000;
+    var thousand = Math.floor(num / 1000); num %= 1000;
+    var hundred = num;
+
+    var parts = [];
+    if (crore) parts.push(threeDigit(crore) + ' Crore');
+    if (lakh) parts.push(threeDigit(lakh) + ' Lakh');
+    if (thousand) parts.push(threeDigit(thousand) + ' Thousand');
+    if (hundred) parts.push(threeDigit(hundred));
+    return parts.join(' ');
+  }
+
+  /* ---------- formatting helpers ---------- */
+  function fmtINR(n){
+    n = Number(n) || 0;
+    var sign = n < 0 ? '-' : '';
+    return sign + '₹' + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+  }
+  function fmtRsPdf(n){
+    n = Number(n) || 0;
+    var sign = n < 0 ? '-' : '';
+    return sign + 'Rs. ' + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+  }
+  function fmtDate(d){
+    if(!d) return '';
+    var parts = d.split('-');
+    if(parts.length !== 3) return d;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  function fmtEventDate(from, to){
+    if(!from) return '';
+    if(!to || to === from) return fmtDate(from);
+    var f = from.split('-'), t = to.split('-');
+    if(f[0] === t[0] && f[1] === t[1]){
+      return parseInt(f[2],10) + ',' + parseInt(t[2],10) + '/' + f[1] + '/' + f[0];
+    }
+    return fmtDate(from) + ' \u2013 ' + fmtDate(to);
+  }
+  function debounce(fn, delay){
+    var t;
+    return function(){
+      var args = arguments, ctx = this;
+      clearTimeout(t);
+      t = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+  }
+  function todayISO(){
+    return new Date().toISOString().slice(0,10);
+  }
+  function slug(s){
+    return (s||'').toString().trim().replace(/[^a-z0-9]+/gi,'-').replace(/(^-|-$)/g,'') || 'draft';
+  }
+
+  /* ---------- item rows ---------- */
+  function addItemRow(prefill){
+    prefill = prefill || {};
+    itemCounter++;
+    var card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML =
+      '<div class="item-card-head"><span>Item ' + itemCounter + '</span>' +
+      '<button type="button" class="remove-item-btn">Remove</button></div>' +
+      '<textarea class="f-particulars" rows="2" placeholder="e.g. Photography &amp; videography">' +
+        (prefill.particulars||'') +
+      '</textarea>' +
+      '<div class="item-grid">' +
+        '<div class="field"><label>Qty</label><input type="number" class="f-qty" min="0" step="1" value="' + (prefill.qty!=null?prefill.qty:1) + '"></div>' +
+        '<div class="field"><label>Days</label><input type="number" class="f-days" min="0" step="1" value="' + (prefill.days!=null?prefill.days:1) + '"></div>' +
+        '<div class="field"><label>Rate (₹)</label><input type="number" class="f-rate" min="0" step="1" value="' + (prefill.rate!=null?prefill.rate:0) + '"></div>' +
+      '</div>' +
+      '<div class="item-amount"><span>Amount</span><b class="f-amount">₹0</b></div>';
+    el('itemsList').appendChild(card);
+    updateRemoveButtons();
+    return card;
+  }
+  function updateRemoveButtons(){
+    var cards = document.querySelectorAll('.item-card');
+    var multiple = cards.length > 1;
+    cards.forEach(function(c){
+      var btn = c.querySelector('.remove-item-btn');
+      btn.style.visibility = multiple ? 'visible' : 'hidden';
+    });
+  }
+
+  el('itemsList').addEventListener('click', function(e){
+    var btn = e.target.closest('.remove-item-btn');
+    if(!btn) return;
+    var cards = document.querySelectorAll('.item-card');
+    if(cards.length <= 1) return;
+    btn.closest('.item-card').remove();
+    updateRemoveButtons();
+    renderAll();
+  });
+  el('addItemBtn').addEventListener('click', function(){
+    var card = addItemRow();
+    renderAll();
+    var ta = card.querySelector('.f-particulars');
+    ta.focus();
+  });
+
+  /* ---------- data collection ---------- */
+  function collectData(){
+    var items = Array.prototype.map.call(document.querySelectorAll('.item-card'), function(card){
+      var particulars = card.querySelector('.f-particulars').value.trim();
+      var qty = parseFloat(card.querySelector('.f-qty').value) || 0;
+      var days = parseFloat(card.querySelector('.f-days').value) || 0;
+      var rate = parseFloat(card.querySelector('.f-rate').value) || 0;
+      var amount = qty * days * rate;
+      var amtEl = card.querySelector('.f-amount');
+      if(amtEl) amtEl.textContent = fmtINR(amount);
+      return { particulars: particulars, qty: qty, days: days, rate: rate, amount: amount };
+    });
+    var total = items.reduce(function(s,i){ return s + i.amount; }, 0);
+    var advance = parseFloat(el('advance').value) || 0;
+    var balance = total - advance;
+
+    return {
+      business: {
+        name: el('bizName').value.trim(),
+        tagline: el('bizTagline').value.trim(),
+        address: el('bizAddress').value.trim(),
+        email: el('bizEmail').value.trim(),
+        phone: el('bizPhone').value.trim(),
+        gstin: el('bizGSTIN').value.trim().toUpperCase(),
+        logoDataUrl: logo.dataUrl,
+        logoRatio: logo.ratio
+      },
+      billNo: el('billNo').value.trim(),
+      billDate: el('billDate').value,
+      clientName: el('clientName').value.trim(),
+      clientAddress: el('clientAddress').value.trim(),
+      clientGSTIN: el('clientGSTIN').value.trim().toUpperCase(),
+      eventName: el('eventName').value.trim(),
+      eventFrom: el('eventFrom').value,
+      eventTo: el('eventTo').value,
+      items: items,
+      total: total,
+      advance: advance,
+      balance: balance,
+      pan: el('pan').value.trim(),
+      notes: el('notes').value.trim(),
+      bank: {
+        holder: el('bankHolder').value.trim(),
+        account: el('bankAccount').value.trim(),
+        ifsc: el('bankIFSC').value.trim().toUpperCase(),
+        bankName: el('bankName').value.trim(),
+        branch: el('bankBranch').value.trim()
+      }
+    };
+  }
+
+  /* ---------- render preview ---------- */
+  function renderAll(){
+    var d = collectData();
+
+    el('pvBizName').textContent = d.business.name || 'Your Business Name';
+    el('pvTagline').textContent = d.business.tagline || '';
+    el('pvAddress').textContent = d.business.address || '';
+    var contact = [d.business.email, d.business.phone ? ('Call: ' + d.business.phone) : ''].filter(Boolean).join('   |   ');
+    el('pvContact').textContent = contact;
+
+    var pvLogo = el('pvLogo');
+    if(d.business.logoDataUrl){ pvLogo.src = d.business.logoDataUrl; pvLogo.hidden = false; }
+    else { pvLogo.hidden = true; pvLogo.removeAttribute('src'); }
+
+    el('pvClient').textContent = d.clientName || '—';
+    el('pvClientAddress').textContent = d.clientAddress || '';
+    el('pvClientGSTIN').textContent = d.clientGSTIN ? ('GSTIN: ' + d.clientGSTIN) : '';
+    el('pvEventName').textContent = d.eventName || '—';
+    el('pvBillNo').textContent = d.billNo || '—';
+    el('pvBillDate').textContent = d.billDate ? fmtDate(d.billDate) : '—';
+    el('pvEventDate').textContent = fmtEventDate(d.eventFrom, d.eventTo) || '—';
+
+    var body = el('pvItemsBody');
+    body.innerHTML = '';
+    d.items.forEach(function(it, idx){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="col-no">' + (idx+1) + '</td>' +
+        '<td>' + (escapeHtml(it.particulars) || '<span style="color:#999">—</span>') + '</td>' +
+        '<td class="col-qty">' + it.qty + '</td>' +
+        '<td class="col-days">' + it.days + '</td>' +
+        '<td class="col-rate">' + fmtINR(it.rate) + '</td>' +
+        '<td class="col-amt">' + fmtINR(it.amount) + '</td>';
+      body.appendChild(tr);
+    });
+    el('pvTotal').textContent = fmtINR(d.total);
+    el('pvWords').textContent = 'Rupees: ' + numToWordsIndian(d.total) + ' Only';
+    el('pvAdvance').textContent = fmtINR(d.advance);
+    el('pvBalance').textContent = fmtINR(d.balance);
+    var panGstParts = [];
+    if(d.pan) panGstParts.push('PAN No: ' + d.pan);
+    if(d.business.gstin) panGstParts.push('GSTIN: ' + d.business.gstin);
+    el('pvPan').textContent = panGstParts.join('   |   ');
+    el('pvNotes').textContent = d.notes || '';
+
+    var bank = d.bank;
+    var bankHtml = '';
+    if(bank.holder || bank.account || bank.ifsc || bank.bankName || bank.branch){
+      bankHtml += '<div class="bank-title">' + escapeHtml(d.business.name || 'Bank') + ' — Bank Details</div>';
+      if(bank.holder) bankHtml += '<div><span class="lbl">Account Holder</span>' + escapeHtml(bank.holder) + '</div>';
+      if(bank.account) bankHtml += '<div><span class="lbl">Account Number</span>' + escapeHtml(bank.account) + '</div>';
+      if(bank.ifsc) bankHtml += '<div><span class="lbl">IFSC Code</span>' + escapeHtml(bank.ifsc) + '</div>';
+      if(bank.bankName || bank.branch) bankHtml += '<div><span class="lbl">Bank &amp; Branch</span>' + escapeHtml([bank.bankName, bank.branch].filter(Boolean).join(', ')) + '</div>';
+    }
+    el('pvBank').innerHTML = bankHtml;
+
+    el('pvSignText').textContent = 'for ' + (d.business.name || 'Your Business Name');
+
+    return d;
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ---------- PDF generation ---------- */
+  function generatePDF(){
+    var d = collectData();
+    var jsPDFCtor = window.jspdf && window.jspdf.jsPDF;
+    if(!jsPDFCtor){
+      alert('PDF library did not load. Check your internet connection and try again.');
+      return;
+    }
+    var doc = new jsPDFCtor({ unit:'mm', format:'a4' });
+    var marginX = 15, pageW = 210, pageH = 297;
+    var y = 20;
+
+    if(d.business.logoDataUrl){
+      try{
+        var h = 18, w = h * (d.business.logoRatio || 1);
+        if(w > 40){ w = 40; h = w / (d.business.logoRatio || 1); }
+        doc.addImage(d.business.logoDataUrl, marginX, y - 4, w, h, undefined, 'FAST');
+      }catch(err){ /* ignore bad image */ }
+    }
+
+    doc.setFont('times','bold'); doc.setFontSize(20); doc.setTextColor(31,46,77);
+    doc.text(d.business.name || 'Business Name', pageW/2, y, {align:'center'});
+    y += 6.5;
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(80,80,80);
+    if(d.business.tagline){ doc.text(d.business.tagline, pageW/2, y, {align:'center'}); y += 4.6; }
+    if(d.business.address){
+      var addrLines = doc.splitTextToSize(d.business.address, 150);
+      addrLines.forEach(function(line){ doc.text(line, pageW/2, y, {align:'center'}); y += 4.6; });
+    }
+    var contactLine = [d.business.email, d.business.phone ? ('Call: ' + d.business.phone) : ''].filter(Boolean).join('   |   ');
+    if(contactLine){ doc.text(contactLine, pageW/2, y, {align:'center'}); y += 4.6; }
+
+    y += 3;
+    doc.setDrawColor(184,134,59); doc.setLineWidth(0.6);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    var rightColX = pageW - marginX - 55;
+    var yLeft = y, yRight = y;
+
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+    doc.text('M/s:', marginX, yLeft);
+    doc.setFont('helvetica','normal');
+    doc.text(d.clientName || '-', marginX + 12, yLeft);
+    yLeft += 5.2;
+
+    if(d.clientAddress){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(75,75,75);
+      var caLines = doc.splitTextToSize(d.clientAddress, rightColX - marginX - 5);
+      caLines.forEach(function(l){ doc.text(l, marginX, yLeft); yLeft += 4.2; });
+    }
+    if(d.clientGSTIN){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(75,75,75);
+      doc.text('GSTIN: ' + d.clientGSTIN, marginX, yLeft);
+      yLeft += 4.6;
+    }
+    doc.setFontSize(10); doc.setTextColor(30,30,30);
+
+    doc.setFont('helvetica','bold');
+    doc.text('Bill No:', rightColX, yRight);
+    doc.setFont('helvetica','normal');
+    doc.text(d.billNo || '-', pageW - marginX, yRight, {align:'right'});
+    yRight += 6;
+
+    doc.setFont('helvetica','bold');
+    doc.text('Bill Date:', rightColX, yRight);
+    doc.setFont('helvetica','normal');
+    doc.text(d.billDate ? fmtDate(d.billDate) : '-', pageW - marginX, yRight, {align:'right'});
+    yRight += 6;
+
+    y = Math.max(yLeft, yRight) + 3;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,30,30);
+    doc.text('Event Name:', marginX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(d.eventName || '-', marginX + 26, y);
+
+    doc.setFont('helvetica','bold');
+    doc.text('Event Date:', rightColX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(fmtEventDate(d.eventFrom, d.eventTo) || '-', pageW - marginX, y, {align:'right'});
+    y += 9;
+
+    var rows = d.items.map(function(it, idx){
+      return [ idx+1, it.particulars || '-', it.qty, it.days, fmtRsPdf(it.rate), fmtRsPdf(it.amount) ];
+    });
+
+    doc.autoTable({
+      startY: y,
+      margin: { left: marginX, right: marginX },
+      head: [['No.','Particulars','Qty','Days','Rate','Amount']],
+      body: rows,
+      foot: [['','','','','Total', fmtRsPdf(d.total)]],
+      theme: 'grid',
+      headStyles: { fillColor:[31,46,77], textColor:255, fontStyle:'bold', halign:'center', fontSize:9 },
+      footStyles: { fillColor:[244,239,226], textColor:[31,46,77], fontStyle:'bold', fontSize:9.5 },
+      columnStyles:{
+        0:{ halign:'center', cellWidth:12 },
+        2:{ halign:'center', cellWidth:16 },
+        3:{ halign:'center', cellWidth:16 },
+        4:{ halign:'right', cellWidth:28 },
+        5:{ halign:'right', cellWidth:30 }
+      },
+      styles:{ font:'helvetica', fontSize:9.5, cellPadding:3, lineColor:[210,204,190], lineWidth:0.2, textColor:[40,40,35] }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // page-break guard for the remaining ~75mm of content
+    if(y + 75 > pageH - 15){
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFont('helvetica','italic'); doc.setFontSize(9.5); doc.setTextColor(50,50,50);
+    var words = 'Rupees: ' + numToWordsIndian(d.total) + ' Only';
+    var wordLines = doc.splitTextToSize(words, 110);
+    var wordsStartY = y;
+    wordLines.forEach(function(l){ doc.text(l, marginX, y); y += 4.6; });
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(30,30,30);
+    var ySide = wordsStartY;
+    doc.text('Advance:', pageW - marginX - 45, ySide);
+    doc.text(fmtRsPdf(d.advance), pageW - marginX, ySide, {align:'right'});
+    ySide += 6;
+    doc.setFont('helvetica','bold');
+    doc.text('Balance:', pageW - marginX - 45, ySide);
+    doc.text(fmtRsPdf(d.balance), pageW - marginX, ySide, {align:'right'});
+
+    y = Math.max(y, ySide + 6) + 2;
+
+    if(d.pan || d.business.gstin){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(40,40,40);
+      var panGstLine = [];
+      if(d.pan) panGstLine.push('PAN No: ' + d.pan);
+      if(d.business.gstin) panGstLine.push('GSTIN: ' + d.business.gstin);
+      doc.text(panGstLine.join('     '), marginX, y);
+      y += 8;
+    }
+
+    if(d.notes){
+      doc.setFont('helvetica','italic'); doc.setFontSize(8.8); doc.setTextColor(90,90,90);
+      var noteLines = doc.splitTextToSize(d.notes, pageW - 2*marginX);
+      noteLines.forEach(function(l){ doc.text(l, marginX, y); y += 4.3; });
+      y += 4;
+    }
+
+    var bank = d.bank;
+    var bankRows = [];
+    if(bank.holder) bankRows.push(['Account Holder', bank.holder]);
+    if(bank.account) bankRows.push(['Account Number', bank.account]);
+    if(bank.ifsc) bankRows.push(['IFSC Code', bank.ifsc]);
+    if(bank.bankName || bank.branch) bankRows.push(['Bank & Branch', [bank.bankName, bank.branch].filter(Boolean).join(', ')]);
+
+    if(bankRows.length){
+      if(y + 10 + bankRows.length*5.5 + 20 > pageH - 15){ doc.addPage(); y = 20; }
+      var boxTop = y;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(31,46,77);
+      doc.text((d.business.name || 'Business') + ' \u2014 Bank Details', marginX, y + 5);
+      var by = y + 10;
+      doc.setFontSize(9.3);
+      bankRows.forEach(function(pair){
+        doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+        doc.text(pair[0] + ':', marginX, by);
+        doc.setFont('helvetica','normal');
+        doc.text(String(pair[1]), marginX + 38, by);
+        by += 5.5;
+      });
+      doc.setDrawColor(210,204,190); doc.setLineWidth(0.3);
+      doc.rect(marginX - 3, boxTop - 2, pageW - 2*marginX + 6, (by - boxTop) + 3);
+      y = by + 12;
+    }
+
+    if(y + 24 > pageH - 15){ doc.addPage(); y = 20; }
+    doc.setDrawColor(120,120,110); doc.setLineWidth(0.25);
+    doc.line(pageW - marginX - 50, y + 10, pageW - marginX, y + 10);
+    doc.setFont('times','italic'); doc.setFontSize(11); doc.setTextColor(31,46,77);
+    doc.text('for ' + (d.business.name || 'Business'), pageW - marginX, y + 16, {align:'right'});
+
+    doc.setProperties({ title: 'Bill ' + (d.billNo || '') });
+    doc.save('Bill-' + slug(d.billNo) + '-' + slug(d.clientName) + '.pdf');
+
+    bumpBillCounter(d.billNo);
+  }
+
+  /* ---------- logo upload ---------- */
+  el('bizLogoInput').addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        logo.dataUrl = ev.target.result;
+        logo.ratio = img.width / img.height || 1;
+        updateLogoPreview();
+        renderAll();
+        saveProfile();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  el('removeLogoBtn').addEventListener('click', function(){
+    logo.dataUrl = null; logo.ratio = 1;
+    el('bizLogoInput').value = '';
+    updateLogoPreview();
+    renderAll();
+    saveProfile();
+  });
+  function updateLogoPreview(){
+    var img = el('bizLogoPreview');
+    var removeBtn = el('removeLogoBtn');
+    if(logo.dataUrl){ img.src = logo.dataUrl; img.hidden = false; removeBtn.hidden = false; }
+    else { img.hidden = true; removeBtn.hidden = true; }
+  }
+
+  /* ---------- persistence (business profile + bill counter) ---------- */
+  function hasStorage(){ return typeof window.storage !== 'undefined' && window.storage; }
+
+  function saveProfile(){
+    if(!hasStorage()) return;
+    var profile = {
+      business: {
+        name: el('bizName').value, tagline: el('bizTagline').value, address: el('bizAddress').value,
+        email: el('bizEmail').value, phone: el('bizPhone').value, gstin: el('bizGSTIN').value,
+        logoDataUrl: logo.dataUrl, logoRatio: logo.ratio
+      },
+      pan: el('pan').value,
+      bank: {
+        holder: el('bankHolder').value, account: el('bankAccount').value,
+        ifsc: el('bankIFSC').value, bankName: el('bankName').value, branch: el('bankBranch').value
+      }
+    };
+    window.storage.set('business-profile', JSON.stringify(profile), false).catch(function(err){
+      console.error('Could not save business profile', err);
+    });
+  }
+  var saveProfileDebounced = debounce(saveProfile, 700);
+
+  function loadProfile(){
+    if(!hasStorage()) return Promise.resolve(false);
+    return window.storage.get('business-profile', false).then(function(res){
+      if(!res || !res.value) return false;
+      var p = JSON.parse(res.value);
+      if(p.business){
+        el('bizName').value = p.business.name || '';
+        el('bizTagline').value = p.business.tagline || '';
+        el('bizAddress').value = p.business.address || '';
+        el('bizEmail').value = p.business.email || '';
+        el('bizPhone').value = p.business.phone || '';
+        el('bizGSTIN').value = p.business.gstin || '';
+        if(p.business.logoDataUrl){
+          logo.dataUrl = p.business.logoDataUrl;
+          logo.ratio = p.business.logoRatio || 1;
+          updateLogoPreview();
+        }
+      }
+      el('pan').value = p.pan || '';
+      if(p.bank){
+        el('bankHolder').value = p.bank.holder || '';
+        el('bankAccount').value = p.bank.account || '';
+        el('bankIFSC').value = p.bank.ifsc || '';
+        el('bankName').value = p.bank.bankName || '';
+        el('bankBranch').value = p.bank.branch || '';
+      }
+      return true;
+    }).catch(function(){ return false; });
+  }
+
+  function loadBillCounter(){
+    if(!hasStorage()) return Promise.resolve(null);
+    return window.storage.get('bill-counter', false).then(function(res){
+      return (res && res.value) ? res.value : null;
+    }).catch(function(){ return null; });
+  }
+  function bumpBillCounter(currentBillNo){
+    if(!hasStorage()) return;
+    var n = parseInt(currentBillNo, 10);
+    if(!isNaN(n)){
+      window.storage.set('bill-counter', String(n+1), false).catch(function(){});
+    }
+  }
+
+  /* ---------- sample defaults (first run only) ---------- */
+  function fillSampleBusinessDefaults(){
+    el('bizName').value = 'Studio Name Photography';
+    el('bizTagline').value = 'Commercial Photography, Studio-Setup, Video & DVD';
+    el('bizAddress').value = '123 Sample Road, Lucknow, Uttar Pradesh - 226001';
+    el('bizEmail').value = 'studio@example.com';
+    el('bizPhone').value = '98765 43210';
+    el('pan').value = 'ABCDE1234F';
+    el('bankHolder').value = 'Studio Name Photography';
+    el('bankAccount').value = 'XXXXXXXXXX1234';
+    el('bankIFSC').value = 'HDFC0000123';
+    el('bankName').value = 'HDFC Bank';
+    el('bankBranch').value = 'Lucknow Branch';
+  }
+
+  /* ---------- new bill ---------- */
+  function resetBillFields(nextBillNo){
+    el('billNo').value = nextBillNo || '';
+    el('billDate').value = todayISO();
+    el('clientName').value = '';
+    el('clientAddress').value = '';
+    el('clientGSTIN').value = '';
+    el('eventName').value = '';
+    el('eventFrom').value = '';
+    el('eventTo').value = '';
+    el('advance').value = 0;
+    el('notes').value = '';
+    el('itemsList').innerHTML = '';
+    itemCounter = 0;
+    addItemRow();
+    renderAll();
+  }
+  el('newBillBtn').addEventListener('click', function(){
+    loadBillCounter().then(function(counter){
+      resetBillFields(counter || '');
+    });
+  });
+
+  /* ---------- tabs (mobile) ---------- */
+  el('tabEditBtn').addEventListener('click', function(){
+    document.body.classList.remove('show-preview');
+    document.body.classList.add('show-edit');
+    el('tabEditBtn').classList.add('active');
+    el('tabPreviewBtn').classList.remove('active');
+  });
+  el('tabPreviewBtn').addEventListener('click', function(){
+    renderAll();
+    document.body.classList.remove('show-edit');
+    document.body.classList.add('show-preview');
+    el('tabPreviewBtn').classList.add('active');
+    el('tabEditBtn').classList.remove('active');
+  });
+
+  /* ---------- global event delegation ---------- */
+  document.querySelector('.form-panel').addEventListener('input', function(){ renderAll(); });
+  el('businessSection').addEventListener('input', saveProfileDebounced);
+  el('bankSection').addEventListener('input', saveProfileDebounced);
+  el('pan').addEventListener('input', saveProfileDebounced);
+  el('bizGSTIN').addEventListener('input', saveProfileDebounced);
+
+  el('downloadBtn').addEventListener('click', generatePDF);
+
+  /* ---------- init ---------- */
+  function init(){
+    el('billDate').value = todayISO();
+    loadProfile().then(function(loaded){
+      if(!loaded) fillSampleBusinessDefaults();
+      return loadBillCounter();
+    }).then(function(counter){
+      el('billNo').value = counter || '1012';
+      addItemRow();
+      renderAll();
+    });
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
